@@ -1,0 +1,12 @@
+.remake
+.Rproj.user
+*.Rproj
+*.csl
+*.pdf
+*.html
+*.RData
+*.tex
+downloads
+results
+figures
+precompile

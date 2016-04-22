@@ -1,0 +1,68 @@
+packages:
+  - knitr
+  - dplyr
+  - rstan
+  - downloader
+  - callr
+  - dockertest
+
+sources:
+  - 'R'
+
+targets:
+  all:
+    depends:
+      - precompile/data_full.rds
+      - precompile/kfold_data/data.rds
+
+  #------------- Download & load data ------------------
+  downloads/baad.rds:
+    command: download_baad(target_name)
+    cleanup_level: purge
+
+  baad_all:
+    command: readRDS("downloads/baad.rds")
+    cleanup_level: purge
+    check: exists
+
+  #------------- Clean data & split into kfolds --------- 
+  
+  cleaned_baad:
+    command: clean_data(baad_all, I('h.t'), I('a.lf'))
+    cleanup_level: purge
+    check: exists
+
+  data_folds:
+    command: split_into_kfolds(cleaned_baad)
+    cleanup_level: purge
+
+  full_dataset:
+    command: extract_trainheldout_set(data_folds, NA)
+    cleanup_level: purge
+
+  training_sets:
+    command: make_trainheldout(data_folds)
+    cleanup_level: purge
+
+  #------------- export_kfolds ---------------------
+
+  precompile/data_full.rds:
+    command: saveRDS(full_dataset, target_name)
+    cleanup_level: purge
+
+  precompile/kfold_data/data.rds:
+    command: export_data(training_sets, target_name)
+    cleanup_level: purge
+
+  #------------- create docker image ---------------------
+  docker_image:
+    command: build_container("docker/dockertest.yml")
+
+  #------------- precompile models ---------------------
+  models_precompiled:
+    command: precompile_all()
+    cleanup_level: purge
+    
+  models_precompiled_docker:
+    command: precompile_docker(docker_image)
+    cleanup_level: purge
