@@ -1,6 +1,6 @@
 # This function builds a dataframe with all the comparisons needed to be run.
 # We've set 10-fold by default to match how we've split the data.
-tasks_2_run <- function(comparison, n_chains=3, iter=4000, path='.') {
+tasks_2_run <- function(comparison, n_chains=3, iter=2000, path='.') {
   n_kfolds = 10
   ret <- expand.grid(
    comparison = comparison,
@@ -55,7 +55,7 @@ model_compiler <- function(task) {
 }
 
 # Runs single chain
-run_single_stan_chain <- function(model, data, chain_id, iter=4000,
+run_single_stan_chain <- function(model, data, chain_id, iter=2000,
   sample_file=NA, diagnostic_file=NA) {
   data_for_stan <- prep_data_for_stan(data)
   stan(model_code = model$model,
@@ -113,8 +113,7 @@ precompile <- function(task) {
   if (!file.exists(filename_rds)) {
     message("Compiling model: ", sig)
     writeLines(model$model, filename_stan)
-    res <- stan(filename_stan, iter=0L)
-    message("Ignore the previous error, everything is OK")
+    res <- stanc(filename_stan)
     saveRDS(res, filename_rds)
     message("Finished model: ", sig)
   }
