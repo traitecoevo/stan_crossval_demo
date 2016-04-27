@@ -5,15 +5,30 @@ packages:
   - downloader
   - callr
   - dockertest
+  - ggplot2
+  - grid
+  - gridExtra
 
 sources:
-  - 'R'
+  - R
+
+plot_options:
+  1col_square:
+    width: 3
+    height: 3
 
 targets:
   all:
     depends:
       - precompile/data_full.rds
       - precompile/kfold_data/data.rds
+
+  process_output:
+    depends:
+      - compiled_models
+      - model_diagnostics
+      - loglik_summary
+      - figures/loglik_plot.pdf
 
   #------------- Download & load data ------------------
   downloads/baad.rds:
@@ -54,15 +69,35 @@ targets:
     command: export_data(training_sets, target_name)
     cleanup_level: purge
 
-  #------------- create docker image ---------------------
-  docker_image:
-    command: build_container("docker/dockertest.yml")
-
   #------------- precompile models ---------------------
-  models_precompiled:
-    command: precompile_all()
-    cleanup_level: purge
-    
   models_precompiled_docker:
-    command: precompile_docker(docker_image)
+    command: precompile_docker(I("traitecoevo/stan_crossval_demo"))
     cleanup_level: purge
+
+  #------------- process models ---------------------
+
+  compiled_models:
+    command: compile_models()
+    cleanup_level: purge
+
+  model_diagnostics:
+    command: kfold_diagnostics(compiled_models)
+    cleanup_level: purge
+
+  loglik_samples:
+    command: extract_loglik_samples(compiled_models)
+    cleanup_level: purge
+
+  loglik_summary:
+    command: summarise_loglik_samples(loglik_samples)
+    cleanup_level: purge
+
+  #------------- Figures ---------------------
+
+  figures/loglik_plot.pdf:
+    command: plot_loglik(loglik_summary)
+    plot: 1col_square
+
+
+
+
