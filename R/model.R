@@ -3,7 +3,7 @@
 
 stan_model <- function() {
   list(
-    pars = c("alpha","beta","sigma_obs"),
+    pars = c("alpha","beta","sigma_obs","total_loglik_heldout"),
     model ="
     data {
       int<lower = 1> n_obs; 
@@ -57,7 +57,7 @@ stan_model <- function() {
 # Model with random effects
 stan_model_re <- function() {
   list(
-    pars = c('alpha_mu','beta_mu','alpha_sigma','beta_sigma','sigma_obs','loglik_heldout'),
+    pars = c('alpha_mu','beta_mu','alpha_sigma','beta_sigma','sigma_obs','total_loglik_heldout'),
     model = "
     data {
       int<lower = 1> n_obs; 
