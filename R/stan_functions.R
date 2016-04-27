@@ -113,7 +113,8 @@ precompile <- function(task) {
   if (!file.exists(filename_rds)) {
     message("Compiling model: ", sig)
     writeLines(model$model, filename_stan)
-    res <- stanc(filename_stan)
+    res <- stan(filename_stan,iter = 0L)
+    message("Ignore the previous error, everything is OK")
     saveRDS(res, filename_rds)
     message("Finished model: ", sig)
   }
