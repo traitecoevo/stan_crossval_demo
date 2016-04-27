@@ -7,7 +7,8 @@ tasks_2_run <- function(comparison, n_chains=3, iter=4000, path='.') {
    iter=iter,
    chain=seq_len(n_chains),
    kfold=seq_len(n_kfolds),
-   stringsAsFactors=FALSE)
+   stringsAsFactors=FALSE) %>%
+    arrange(comparison, kfold, chain)
 
   ret$modelid <- rep(1:nrow(unique(ret[,c('comparison','kfold')])),each = n_chains)
   ret <- ret %>%
@@ -158,7 +159,7 @@ precompile_docker <- function(docker_image) {
   x<- 3
   unlink(precompile_model_path(), recursive=TRUE)
   cmd <- '"remake::dump_environment(verbose=FALSE, allow_missing_packages=TRUE); precompile_all()"'
-  dockertest::launch(name=docker_image$name,
+  dockertest::launch(name=docker_image,
    filename="docker/dockertest.yml",
    args=c("r", "-e", cmd))
 }
