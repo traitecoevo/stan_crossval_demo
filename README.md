@@ -60,6 +60,7 @@ docker-machine create --virtualbox-memory "3000" --driver virtualbox --virtualbo
 Next we wish to add a Ubuntu operating system, R and all dependent packages to the docker container. Since building such an image can take some time, we've already done the hard work for you such that you can simply download the image from the terminal using:
 
 ```
+eval "$(docker-machine env mem3GB)"
 docker pull traitecoevo/stan_crossval_demo:latest
 ```
 
@@ -76,6 +77,7 @@ This will open R and connect you to the docker container `mem3B`.
 If you have several different models to run, it is best to precompile them for use with docker prior to actually sampling the models. This can be done in R (assuming you are within `stan_crossval_demo`):
 
 ```
+R
 remake::make('models_precompiled_docker')
 ```
 
@@ -140,67 +142,43 @@ docker run --rm --link stan_crossval_demo_redis:redis -v ${PWD}:/home/data -t tr
 This will launch workers that will begin to run through your jobs. The progress of these jobs can be seen from the controller terminal. Also as jobs complete they will automatically be exported to your parent directory under `results`.
 
 ### Combining chains for each model
-Once all jobs are complete, you will want to examine model diagnostics and posteriors. To do this we need to combine all the chains associated with a given model.
+Once all jobs are complete, you will want to examine model diagnostics, posteriors and produce plots. To do this we need to combine all the chains associated with a given model.
 
-We have developed some R functions to help with this. Open R (or Rstudio) and load the source code and required packages
-
-```
-packages <- c("rstan","dplyr","tidyr")
-sources <- c("R/stan_functions.R",
-             "R/process_output.R")
-
-for (p in packages) {
-  library(p, character.only=TRUE, quietly=TRUE)
-}
-for (s in sources) {
-  source(s)
-}
-```
-
-Now if you are only interested in a single model and you want to compile chains per kfold you can use:
+We have incorporated these processes into remake, allowing us to do all of the above with a single remake call in R:
 
 ```
-single_model <- compile_multiple_comparisons(comparison = "without_random_effects")
+R
+remake:make('process_output')
 ```
 
-However, in the more likely scenario where you are comparing multiple models you can use:
+The above will compile tchains for each model, extract model diagnostics, extract log likelihoods and then calculate the mean and 95% confidence interval of log likelihoods across folds and then plots these and save the figure in `figures/`.
+
+All the intermediate steps are saved as .remake files. You can access any step by simply calling the desired target name in the remake.yml file.
+
+For example, if we wish to have a look at the list of compiled models we could run:
 
 ```
-multi_model <- compile_multiple_comparisons(comparison = c("without_random_effects","with_random_effects"))
+model_list <- remake::make('compiled_models')
 ```
 
-These functions will return a single list with all fits for each stan model/kfold combination.
-
-### Model diagnostics
-
-If we are comparing many models, each with 10 kfolds, checking the diagnostics of each fit can be tedious and time consuming. In order to get around this we have written a diagnostic summary function that will give you a quick overview of how your model performed in terms of the worst convegence diagnostic (`Rhat`), the minimum effective sample size (`min_n_eff`), the number of Rhat's below 1.1 (`n_bad_rhat`), the number of divergent iterations (`n_divergent`) and the maximum_treedepth obtained `max_treedepth`. Again this can be done for a single model type or for multiple models.
+Or maybe we want to look at a summary of model diagnoistics:
 
 ```
-# single model
-kfold_diagnostics(single_model)
-
-# multiple models
-multi_analysis_kfold_diagnostics(multi_model)
+remake::make('model_diagnostics')
 ```
 
-### Extracting log likelihood samples
-Now we want to extract the log likelihood samples from each kfold. Again this can be done for each individual model or across all models.
+Or maybe you just want to see the actual values of the log likelihood summaries:
 
 ```
-# Single model
-single_model_samples <- extract_loglik_samples(single_model)
-
-# Multiple models
-multi_model_samples <- extract_multi_comparison_loglik_samples(multi_model)
+remake::make('loglik_summary')
 ```
 
-### Summarizing log likelihood samples
-Lastly we want to summaries these such that we take the average across kfolds and calculate an confidence interval. In this case the same function can be applied to both single and multi model structures.
+In this example the model that incorporated species effects was by far the more predictive model (lower log likelihood). If we then wanted to see the effects of parameters we would rerun this model on the entire dataset and simulate response curves based on the parameter posteriors.
 
-```
-summarise_loglik_samples(single_model_samples)
-summarise_loglik_samples(multi_model_samples)
-```
+Hope this helps!
+Good luck!
+
+
 
 
 
