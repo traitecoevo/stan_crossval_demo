@@ -1,4 +1,4 @@
-# How to run cross-validation in stan efficiently using your local computer & docker.
+# Example of how to run cross-validation in stan efficiently using your local computer & docker.
 
 Here we provide an example of how to run 10-fold cross-validation in stan by using `docker`, `remake` and `rrqueue`.
 
@@ -8,7 +8,7 @@ Downloading a zip directly from github or if you have `git` installed via the te
 ```
 git clone git@github.com:traitecoevo/stan_crossval_demo.git
 ```
-
+**NOTE** If you wish to apply this workflow to your own projects you will need to `git init` your project directory.
 
 ### Install remake & dockertest
 [remake](https://github.com/richfitz/remake) is a package that allows us to use a make-like workflow in R by specifying a series of declarative actions. In essence, this package tells R what order things should be run in to ensure all dependencies are met. 
