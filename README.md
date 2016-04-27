@@ -148,7 +148,7 @@ We have incorporated these processes into remake, allowing us to do all of the a
 
 ```
 R
-remake:make('process_output')
+remake::make('process_output')
 ```
 
 The above will compile tchains for each model, extract model diagnostics, extract log likelihoods and then calculate the mean and 95% confidence interval of log likelihoods across folds and then plots these and save the figure in `figures/`.
