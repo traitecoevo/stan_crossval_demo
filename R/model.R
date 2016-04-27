@@ -57,7 +57,7 @@ stan_model <- function() {
 # Model with random effects
 stan_model_re <- function() {
   list(
-    pars = c('alpha_mu','beta_mu','alpha_sigma','beta_sigma','sigma_spp','sigma_obs','loglik_heldout'),
+    pars = c('alpha_mu','beta_mu','alpha_sigma','beta_sigma','sigma_obs','loglik_heldout'),
     model = "
     data {
       int<lower = 1> n_obs; 
@@ -80,7 +80,6 @@ stan_model_re <- function() {
     real<lower=0> alpha_sigma;
     real beta_mu;
     real<lower=0> beta_sigma;
-    real<lower=0> sigma_spp;
     real<lower=0> sigma_obs;
   }
   model {
@@ -93,7 +92,7 @@ stan_model_re <- function() {
     
     # Priors
     alpha ~ normal(alpha_mu,alpha_sigma);
-    beta ~ normal(beta_mu,10);
+    beta ~ normal(beta_mu,beta_sigma);
     alpha_mu ~ normal(0,10);
     alpha_sigma ~ cauchy(0,5);
     beta_mu ~ normal(0, 10);
