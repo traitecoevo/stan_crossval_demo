@@ -4,35 +4,41 @@ log_sum_exp <- function(x) {
   max(x) + log(sum(exp(x - max(x))))
 }
 
-# Merge chains related to a given model/kfold combination
+# stan's chain merger
 combine_stan_chains <- function(files) {
   rstan::sflist2stanfit(lapply(files, readRDS))
 }
 
-# Compile all models related to a given analyses
-compile_models <- function(comparison) {
+# sub function to compile chains for our workflow
+compile_chains <- function(comparison) {
   if(!comparison %in% c("without_random_effects","with_random_effects")) {
     stop('comparison can only be one of the following: 
                       "without_random_effects","with_random_effects"')
   }
   tasks <- tasks_2_run(comparison)
-  sets <- split(tasks,  list(tasks$comparison,tasks$model,tasks$growth_measure,tasks$rho_combo,tasks$kfold), sep='_', drop=TRUE)
+  sets <- split(tasks,  list(tasks$comparison,tasks$kfold), sep='_', drop=TRUE)
   
   fits <- lapply(sets, function(s) combine_stan_chains(s[['filename']]))
-  pars <- lapply(sets,  function(s) s[1, c("comparison","model","growth_measure","rho_combo","kfold")])
+  pars <- lapply(sets,  function(s) s[1, c("comparison","kfold")])
   
   list(model_info=pars, fits=fits)
 }
 
-# Compile multiple analyses at once
-compile_multiple_comparisons <- function(comparison) {
-  sapply(comparison, function(x) compile_models(x), simplify = FALSE)
+# Compile chains for all models
+compile_models <- function(comparison= c("without_random_effects","with_random_effects")) {
+  if(length(comparison) == 1) {
+    compile_chains(comparison)
+  }
+  else {
+    sapply(comparison, function(x) compile_chains(x), simplify = FALSE)
+  }
 }
+  
 
-# Examine model diagnostics for single comparison
-kfold_diagnostics <- function(comparison) {
-  fits <- comparison$fits
-  info <- comparison$model_info
+# Diagnostic function
+diagnostics <- function(model) {
+  fits <- model$fits
+  info <- model$model_info
   out1 <- bind_rows(lapply(fits, function(x) {
     summary_model <- summary(x)$summary
     sampler_params <- get_sampler_params(x, inc_warmup=FALSE)
@@ -47,33 +53,35 @@ kfold_diagnostics <- function(comparison) {
   out2 <- suppressWarnings(bind_rows(lapply(info, function(x) {
     data.frame(
       comparison = x$comparison,
-      model = x$model,
-      growth_measure = x$growth_measure,
-      rho_combo = x$rho_combo,
       kfold = as.integer(x$kfold))
   })))
   
   res <- cbind(out2,out1) %>%
-    arrange(comparison, model, growth_measure, rho_combo, kfold)
+    arrange(comparison, kfold)
   
   row.names(res) <- NULL
   return(res)
 }
 
-# Examine model diagnostics for multiple analysis
-multi_analysis_kfold_diagnostics <- function(list_of_analyses) {
-  out <- suppressWarnings(bind_rows(lapply(list_of_analyses, function(x) {
-    kfold_model_diagnostics(x)})))
-  row.names(out) <- NULL
+# Examine model diagnostics for all analysis
+kfold_diagnostics <- function(model) {
+  if(is.null(model$fits)) { #Check to see if object is multi model 
+    out <- suppressWarnings(bind_rows(lapply(model, function(x) {
+      diagnostics(x)})))
+    row.names(out) <- NULL
+  }
+  else {
+    out <- diagnostics(model)
+  }
   return(out)
 }
 
-# Extract Log Loss samples for single comparison
-extract_loglik_samples <- function(comparison) {
-  fits <- comparison$fits
-  info <- plyr::ldply(comparison$model_info, .id='modelid')
+# sub function to extract log likelihood samples
+loglik_samples <- function(model) {
+  fits <- model$fits
+  info <- plyr::ldply(model$model_info, .id='modelid')
   samples <- lapply(fits, function(x) 
-    rstan::extract(x, pars = c('loglik_heldout')))
+    rstan::extract(x, pars = c('total_loglik_heldout')))
   
   res <- plyr::ldply(lapply(samples, function(x) {
     tidyr::gather(data.frame(x),'loglik','estimate')}), .id='modelid')
@@ -82,46 +90,28 @@ extract_loglik_samples <- function(comparison) {
     select(-modelid)
 }
 
-# Extract log likelihood samples for multiple analyses.
-extract_multi_comparison_loglik_samples <- function(list_of_comparisons){
-  samples <- lapply(list_of_comparisons, extract_loglik_samples)
+# Extract log likelihood samples for all models.
+extract_loglik_samples <- function(model) {
+  if(is.null(model$fits)) { #Check to see if object is multi model 
+  samples <- lapply(model, loglik_samples)
   plyr::ldply(samples, .id='modelid') %>%
     select(-modelid)
+  }
+  else { 
+    loglik_samples(model)
+  }
 }
 # Summarise log likelihood samples
 summarise_loglik_samples <- function(samples) {
   samples %>%
-    group_by(comparison, model, growth_measure, rho_combo, kfold, logloss) %>%
-    summarise(kfold_logloss = mean(log_sum_exp(estimate))) %>%
+    group_by(comparison, kfold, loglik) %>%
+    summarise(kfold_loglik = mean(log_sum_exp(estimate))) %>%
     ungroup() %>%
-    group_by(comparison, model, growth_measure, rho_combo, logloss) %>%
-    summarise(mean = mean(kfold_logloss),
-              st_err = sd(kfold_logloss)/sqrt(n())) %>%
+    group_by(comparison, loglik) %>%
+    summarise(mean = mean(kfold_loglik),
+              st_err = sd(kfold_loglik)/sqrt(n())) %>%
     mutate(ci = 1.96 * st_err,
            `2.5%` = mean - ci,
            `97.5%` = mean + ci) %>%
     ungroup()
-}
-
-#
-get_times <- function(comparison) {
-   fits <- comparison$fits
-  info <- plyr::ldply(comparison$model_info, .id='modelid')
-  times <- lapply(fits, function(x) 
-    rstan::get_elapsed_time(x))
-  
-  res <- plyr::ldply(lapply(times, function(x) {
-    tidyr::gather(data.frame(x),'warmup','sample')}), .id='modelid')
-  
-  left_join(info, res, 'modelid') %>%
-    select(-modelid) %>%
-    mutate(total_hours = ((warmup + sample)/3600))
-}
-
-
-summarise_times <- function(times) {
-  res <- times %>%
-    group_by(comparison, model, growth_measure, rho_combo) %>%
-    summarise(mn = median(total_hours))
-  return(res)
 }
