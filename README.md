@@ -6,7 +6,7 @@ Here we provide an example of how to run 10-fold cross-validation in stan by usi
 Downloading a zip directly from github or if you have `git` installed via the terminal by first navigating to the path you wish for the repository to be saved and then running:
 
 ```
-git clone git@github.com:jscamac/rstan_kfold_cluster_example.git
+git clone git@github.com:traitecoevo/stan_crossval_demo.git
 ```
 
 
