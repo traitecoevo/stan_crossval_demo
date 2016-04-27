@@ -1,4 +1,4 @@
-# Example of how to run cross-validation in stan efficiently using your local computer & docker.
+# Example of how to efficiently run cross-validation in stan using your local computer & docker.
 
 Here we provide an example of how to run 10-fold cross-validation in stan by using `docker`, `remake` and `rrqueue`.
 
