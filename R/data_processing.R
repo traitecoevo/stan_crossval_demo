@@ -15,14 +15,9 @@ clean_data <- function(data, response, covariate) {
     mutate(n_ind = n()) %>%
     ungroup() %>%
     filter(n_ind >=10) %>% # Only select species with at least 10 individuals
-    group_by(location) %>%
-    mutate(n_site = n()) %>%
-    ungroup() %>%
-    filter(n_site >=10) %>% # Only select sites with at least 10 individuals
-    mutate(sp_id = as.numeric(factor(speciesMatched)),
-           site_id = as.numeric(factor(location))) %>%
-    arrange(sp_id, site_id) %>%
-    select_('location', 'n_site','site_id','n_ind', 'speciesMatched', 'sp_id', 'map', 'mat', response, covariate)
+    mutate(sp_id = as.numeric(factor(speciesMatched))) %>%
+    arrange(sp_id) %>%
+    select_('n_ind', 'speciesMatched', 'sp_id', response, covariate)
 }
 
 make_trainheldout <- function(data) {
