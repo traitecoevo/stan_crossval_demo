@@ -6,8 +6,6 @@ packages:
   - callr
   - dockertest
   - ggplot2
-  - grid
-  - gridExtra
 
 sources:
   - R
