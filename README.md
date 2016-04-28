@@ -22,7 +22,9 @@ Assuming devtools is already installed, the running the following in R will inst
 devtools::install_github("richfitz/remake")
 install.packages(c("R6", "yaml", "digest", "crayon", "optparse"))
 devtools::install_github("richfitz/storr")
+devtools::install_github("richfitz/remake")
 remake::install_missing_packages()
+devtools::install_github("traitecoevo/dockertest")
 ```
 
 NOTE: if `devtools` is not installed it can be by running `install.packages("devtools")`.
