@@ -29,7 +29,7 @@ NOTE: if `devtools` is not installed it can be by running `install.packages("dev
 
 
 ### Process data ready for analysis
-Now we need to prepare, download and process the data for subsequent use with models. We've automated this using the package `remake` and its declaration file `remake.yml`.  For a tutorial of how to use `remake` please see [here](https://github.com/ropenscilabs/remake-tutorial)
+Now we need to prepare, download and process the data for subsequent use with models. We've automated this using the package `remake` and its declaration file `remake.yml`.  For a tutorial of how to use `remake` please see [here](https://github.com/ropenscilabs/remake-tutorial).
 
 Ensuring you are within `stan_crossval_demo` you can enter R and run the following:
 
