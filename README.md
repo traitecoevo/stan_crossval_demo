@@ -1,6 +1,6 @@
 # Example of how to efficiently run cross-validation in stan using your local computer & docker.
 
-Here we provide an example of how to run 10-fold cross-validation in stan by using `docker`, `remake` and `rrqueue`. This workflow is set up so that it can readily be scaled up for use on a cluster such as the Amazon's EC2 cluster.
+Here we provide an example of how to run 10-fold cross-validation in stan by using `docker`, `remake` and `rrqueue`. This workflow is set up so that it can readily be scaled up for use on a cluster such as the Amazon's EC2.
 
 ## First clone this repository
 Downloading a zip directly from github or if you have `git` installed via the terminal by first navigating to the path you wish for the repository to be saved and then running:
