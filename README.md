@@ -144,7 +144,7 @@ This will launch workers that will begin to run through your jobs. The progress 
 ### Combining chains for each model
 Once all jobs are complete, you will want to examine model diagnostics, posteriors and produce plots. To do this we need to combine all the chains associated with a given model.
 
-We have incorporated these processes into remake, allowing us to do all of the above with a single remake call in R:
+We have incorporated these processes into remake, allowing us to do all of the above with a single remake call in R. To do this, open up a new R session in the directory `stan_crossval_demo`. (We can't use the existing R session because that is an R session opened in the docker container)
 
 ```
 R
@@ -167,11 +167,17 @@ Or maybe we want to look at a summary of model diagnoistics:
 remake::make('model_diagnostics')
 ```
 
-Or maybe you just want to see the actual values of the log likelihood summaries:
+Or maybe we just want to see the actual values of the log likelihood summaries:
 
 ```
 remake::make('loglik_summary')
 ```
+
+We can also plot these log likelihood differences by running:
+```
+remake::make('figures/loglik_plot.pdf')
+```
+which will create a figure and save a pdf of it in the folder `figures/`.
 
 In this example the model that incorporated species effects was by far the more predictive model (lower log likelihood). If we then wanted to see the effects of parameters we would rerun this model on the entire dataset and simulate response curves based on the parameter posteriors.
 
