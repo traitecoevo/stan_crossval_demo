@@ -1,22 +1,17 @@
-# Example of how to efficiently run cross-validation in stan using your local computer & docker.
+Here we demonstrate three possible `remake` workflows that can be used to run cross validation with Rstan. The three approaches are designed so that the modelling issue can readily be scaled up or down as required. The three workflows we discuss here, from simplest to most complex include: 1) Running cross validation on your local computer; 2) Running on your local machine using `docker` and a queuing system `rrqueue`; and 3) workflow 2 but combined with Amazon's EC2 cluster.
 
-Here we provide an example of how to run 10-fold cross-validation in stan by using `docker`, `remake` and `rrqueue`. This workflow is set up so that it can readily be scaled up for use on a cluster such as the Amazon's EC2.
+In all workflows we treat the individual chains as job targets to be complete as opposed to an entire model object of N chains. We do this because in `stan` chains can finish at different times, and consquently, if jobs were submitted as *per model* then we'd lose efficiency as CPU workers will not be able to process to the next job until all chains are complete for a given model. Furthermore, by treating chains as the jobs targets we add additional flexibility to run as many jobs as there are CPUs.
 
 ## First clone this repository
+
 Downloading a zip directly from github or if you have `git` installed via the terminal by first navigating to the path you wish for the repository to be saved and then running:
 
 ```
 git clone git@github.com:traitecoevo/stan_crossval_demo.git
 ```
-**NOTE** If you wish to apply this workflow to your own projects you will need to `git init` your project directory.
 
-### Install remake & dockertest
+## Install remake
 [remake](https://github.com/richfitz/remake) is a package that allows us to use a make-like workflow in R by specifying a series of declarative actions. In essence, this package tells R what order things should be run in to ensure all dependencies are met. 
-
-[dockertest](https://github.com/traitecoevo/dockertest) auto generates the Dockerfile; the main configuration file is `docker/dockertest.yml`, which is declarative rather than a list of instructions.
-
-Both packages are not currently on CRAN but can be installed using `devtools`. 
-Assuming devtools is already installed, the running the following in R will install these packages, their dependencies and any other needed to run these analyses.
 
 ```
 devtools::install_github("richfitz/remake")
@@ -29,9 +24,8 @@ devtools::install_github("traitecoevo/dockertest")
 
 NOTE: if `devtools` is not installed it can be by running `install.packages("devtools")`.
 
-
-### Process data ready for analysis
-Now we need to prepare, download and process the data for subsequent use with models. We've automated this using the package `remake` and its declaration file `remake.yml`.  For a tutorial of how to use `remake` please see [here](https://github.com/ropenscilabs/remake-tutorial).
+## Process data ready for analysis
+Now we need to download, process and split the data into 10-folds for subsequent use with stan. We've automated this using the package `remake` and its declaration file `remake.yml`.  For a tutorial of how to use `remake` please see [here](https://github.com/ropenscilabs/remake-tutorial).
 
 Ensuring you are within `stan_crossval_demo` you can enter R and run the following:
 
@@ -39,20 +33,47 @@ Ensuring you are within `stan_crossval_demo` you can enter R and run the followi
 R # enters R
 remake::make() # runs remake
 ```
+From here on in we have three possible workflows that a user could implement. We discuss these below.
+
+## Simplest approach: Running cross validation on local computer
+
+**NOTE** We could have implemented this entire workflow in a single call to `remake` by adding additional dependencies to the target `all`. However, as we are highlighting three different approaches we are set remake as a two step process: first we process the data, then we run the models and/or process the model outputs.
+
+Now that the data is processed we can queue and simultaneously run as many jobs as there are `parallel::detectCores() - 1`. Here we parallelise our jobs by using `parallel::mclapply`. Unfortuantely, this won't work for windows users who will need to change the function `run_jobs` in `R/stan_functions` to use a windows equivalent such as `parlapply`.
+
+Running the following in the same R terminal as above will will precompile all stan models and then run all jobs defined in the remake object `tasks`:
+
+```
+remake::make('simple')
+```
+
+This should produce a a directory within the project called `results/` which will save all the chain fits for all model types (in this case `without_random_effects` and `with_random_effects`).
+
+Pretty impressive huh?
+
+What if you want to run your cross validation in a controlled and reproducible environment? We can use docker for this!
+
+## Middle approach: Cross validation with docker
+
+**NOTE** If you have ran the previous approach and want to try this first refresh your remake by running:
+
+```
+remake::make('purge')
+remake::make()
+```
 
 ### Install docker
 
-Docker is a program that allows users to makes virtual machines (called containers) that contains all the software needed to run a program or analysis. As such it is a tool that can be used to guarantee some software will always run the same way, regardless of the environment it is running in. Instructions on how to install this can be found [here](https://docs.docker.com)
+Docker is a program that allows users to makes virtual machines (called containers) that contains all the software needed to run a program or analysis. As such it is a tool that can be used to guarantee some software will always run the same way, regardless of the environment it is running in. Instructions on how to install this can be found [here](https://docs.docker.com).
 
-### Creating a docker container
+### Create a docker container
 
 Once docker is installed we can build a docker container (a virtual machine). In our case, because we want to compile rstan models we require a container with sufficient amount of memory. 
-Below we quit out of R and build a docker container with 3 GB of ram and 3 CPUs in the terminal using the Docker command `docker-machine`. We call this container  `mem3GB`
+Below we quit out of R and build a docker container with 3 GB of ram and 3 CPUs (the exact number will depend on how many cores you are happy to use) in the terminal using the Docker command `docker-machine`. We call this container  `mem3GB`
 
 ```
 q("no") # quits R
 docker-machine create --virtualbox-memory "3000" --driver virtualbox --virtualbox-cpu-count 3 mem3GB
-
 ```
 (`--virtualbox-memory "3000"` sets how much virtual memory is available to the virtual machine.
  `----virtualbox-cpu-count 3` sets the number of CPUs you wish to use from your local machine)
@@ -74,12 +95,11 @@ dockertest::build(machine = "mem3GB")
 This will open R and connect you to the docker container `mem3B`.
 
 
-### Precompile stan models
+### Precompile stan models for docker container
 
 If you have several different models to run, it is best to precompile them for use with docker prior to actually sampling the models. This can be done in R (assuming you are within `stan_crossval_demo`):
 
 ```
-R
 remake::make('models_precompiled_docker')
 ```
 
@@ -143,8 +163,9 @@ docker run --rm --link stan_crossval_demo_redis:redis -v ${PWD}:/home/data -t tr
 
 This will launch workers that will begin to run through your jobs. The progress of these jobs can be seen from the controller terminal. Also as jobs complete they will automatically be exported to your parent directory under `results`.
 
-### Combining chains for each model
-Once all jobs are complete, you will want to examine model diagnostics, posteriors and produce plots. To do this we need to combine all the chains associated with a given model.
+
+## Processing your outputs
+Once all jobs are complete (regardless of the approach you undertook), you will want to examine model diagnostics, posteriors and produce plots. To do this we need to combine all the chains associated with a given model.
 
 We have incorporated these processes into remake, allowing us to do all of the above with a single remake call in R. To do this, open up a new R session in the directory `stan_crossval_demo`. (We can't use the existing R session because that is an R session opened in the docker container)
 
