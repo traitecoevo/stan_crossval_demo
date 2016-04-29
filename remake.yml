@@ -22,6 +22,16 @@ targets:
       - precompile/data_full.rds
       - precompile/kfold_data/data.rds
 
+  simple:
+    depends:
+      - models_precompiled
+      - tasks
+      - run_models
+      - compiled_models
+      - model_diagnostics
+      - loglik_summary
+      - figures/loglik_plot.pdf
+
   process_output:
     depends:
       - compiled_models
@@ -69,8 +79,23 @@ targets:
     cleanup_level: purge
 
   #------------- precompile models ---------------------
+
+  models_precompiled:
+    command: precompile_all()
+    cleanup_level: purge
+
   models_precompiled_docker:
     command: precompile_docker(I("traitecoevo/stan_crossval_demo"))
+    cleanup_level: purge
+
+  #------------- Run models locally without docker --
+
+  tasks:
+    command: tasks_2_run()
+    cleanup_level: purge
+
+  run_models:
+    command: run_jobs(tasks)
     cleanup_level: purge
 
   #------------- process models ---------------------
