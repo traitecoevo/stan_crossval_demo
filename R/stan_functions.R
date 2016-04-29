@@ -1,6 +1,6 @@
 # This function builds a dataframe with all the comparisons needed to be run.
 # We've set 10-fold by default to match how we've split the data.
-tasks_2_run <- function(comparison, n_chains=3, iter=2000, path='.') {
+tasks_2_run <- function(comparison =c('without_random_effects', 'with_random_effects'), n_chains=3, iter=2000, path='.') {
   n_kfolds = 10
   ret <- expand.grid(
    comparison = comparison,
@@ -162,4 +162,9 @@ precompile_docker <- function(docker_image) {
   dockertest::launch(name=docker_image,
    filename="docker/dockertest.yml",
    args=c("r", "-e", cmd))
+}
+
+# For running jobs locally without docker
+run_jobs <- function(tasks) {
+  parallel::mclapply(df_to_list(tasks), model_compiler, mc.cores = getOption("mc.cores", parallel::detectCores()-1))
 }
