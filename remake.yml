@@ -27,10 +27,6 @@ targets:
       - models_precompiled
       - tasks
       - run_models
-      - compiled_models
-      - model_diagnostics
-      - loglik_summary
-      - figures/loglik_plot.pdf
 
   process_output:
     depends:
@@ -102,19 +98,16 @@ targets:
 
   compiled_models:
     command: compile_models()
-    cleanup_level: purge
+    cleanup_level: tidy
 
   model_diagnostics:
     command: kfold_diagnostics(compiled_models)
-    cleanup_level: purge
 
   loglik_samples:
     command: extract_loglik_samples(compiled_models)
-    cleanup_level: purge
 
   loglik_summary:
     command: summarise_loglik_samples(loglik_samples)
-    cleanup_level: purge
 
   #------------- Figures ---------------------
 
