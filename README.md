@@ -51,11 +51,13 @@ This should produce a a directory within the project called `results/` which wil
 
 Pretty impressive huh?
 
-What if you want to run your cross validation in a controlled and reproducible environment? We can use docker for this!
+For details about how to process this output see `Processing your outputs` towards the end of this document.
+
+Now... what if you want to run your cross validation in a controlled and reproducible environment? We can use docker for this!
 
 ## Middle approach: Cross validation with docker
 
-**NOTE** If you have ran the previous approach and want to try this first refresh your remake by running:
+**NOTE** If you have ran the previous approach and want to try this first refresh your remake by running the following in R:
 
 ```
 remake::make('purge')
@@ -100,6 +102,7 @@ This will open R and connect you to the docker container `mem3B`.
 If you have several different models to run, it is best to precompile them for use with docker prior to actually sampling the models. This can be done in R (assuming you are within `stan_crossval_demo`):
 
 ```
+R
 remake::make('models_precompiled_docker')
 ```
 
