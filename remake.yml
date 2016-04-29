@@ -1,6 +1,7 @@
 packages:
   - knitr
   - dplyr
+  - tidyr
   - rstan
   - downloader
   - callr
